@@ -24,32 +24,32 @@ function weightedLS(A::Array{Float64,2}, b::Array{Float64,1}, W::Array{Float64,1
     Rd = zeros(m, n+1)
     rd_row = 1
     rd = zeros(1, n+1)
-    for j=1:n
-        a = Ab[1:m,j:j]
+    for j=1:n  # loop over columns
+        a = Ab[1:m,j:j]  # get jth column of new system
         constraint_row = checkConstraint(dropdims(a,dims=2),W,m)
         if constraint_row > 0
-            rd = Ab[constraint_row:constraint_row,:]
-            Rd[rd_row,:] = rd
+            rd = Ab[constraint_row:constraint_row,:]      # get constraint row
+            Rd[rd_row,:] = rd                             # row of R matrix
             outweights[rd_row] = weights[constraint_row]
             rd_row += 1
-            if rd_row -1 > max_rank
+            if rd_row -1 > max_rank                       # check if out of bounds (why -1)
                 break
             end
 
-            m -= 1
+            m -= 1  # decrease number of rows?
 
-            if constraint_row != m-1
+            if constraint_row != m-1  # is this supposed to be +1?
                 Ab[constraint_row,:] = Ab[m+1,:]
                 weights[constraint_row,:] = weights[m+1,:]
             end
             a_reduced = Ab[1:m,j:j]
             
-            a_reduced = a_reduced .* 1.0/rd[1,j]
-            Ab[1:m,j+1:n+1] -= a_reduced * rd[1:1,j+1:n+1]
+            a_reduced = a_reduced .* 1.0/rd[1,j]  # divide by the jth column
+            Ab[1:m,j+1:n+1] -= a_reduced * rd[1:1,j+1:n+1]  # subtract off the rest of the row?
         else
             precision = 0
-            pseudo = zeros(m, 1)
-            for i=1:m
+            pseudo = zeros(m, 1)  # bad (don't allocate in inner loop!)
+            for i=1:m  # iterate over rows
                 ai = a[i]
                 if (abs(ai) > 1e-9)
                     pseudo[i,1] = weights[i]*ai
@@ -59,8 +59,8 @@ function weightedLS(A::Array{Float64,2}, b::Array{Float64,1}, W::Array{Float64,1
                 end
             end
             if precision > 1e-8
-                pseudo = pseudo ./ precision
-                rd = zeros(1, n+1)
+                pseudo = pseudo ./ precision  # normalize vector so it sums to 1
+                rd = zeros(1, n+1)   # bad (don't allocate in inner loop)
                 rd[1,j] = 1.0
                 rd[1:1,j+1:n+1] = pseudo' * Ab[1:m,j+1:n+1]
                 Rd[rd_row,:] = rd
